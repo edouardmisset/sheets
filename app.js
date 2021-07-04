@@ -44,4 +44,37 @@ app.get('/routes', async (req, res) => {
   }
 });
 
+app.get('/ascentsBySeason', async (req, res) => {
+  try {
+    const auth = await google.auth.getClient({
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth });
+    const range = 'ascents!A1:O385';
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.SHEET_ID,
+      range,
+    });
+    const [header, ...rawAscents] = response.data.values;
+    
+    const ascents = rawAscents.map(ascent => ({
+      name: ascent[0],
+      grade: ascent[1],
+      date: ascent[12],
+    }));
+
+    const seasons = new Set(
+      ascents.map(({ date }) => {
+        const newDate = new Date(date);
+        return newDate.getFullYear();
+      })
+    );
+
+    res.send({ ascents, seasons });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(err);
+  }
+});
+
 module.exports = server;
