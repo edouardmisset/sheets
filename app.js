@@ -1,5 +1,6 @@
 const express = require('express');
 const { google } = require('googleapis');
+const cors = require('cors');
 
 require('dotenv').config();
 
@@ -12,6 +13,20 @@ const port = PORT || 5000;
 app.use(express.json());
 app.set('x-powered-by', false); // for security
 app.set('trust proxy', 1); // trust first proxy
+
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',');
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (origin === undefined || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 const server = app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
@@ -36,8 +51,8 @@ app.get('/routes', async (req, res) => {
       spreadsheetId: process.env.SHEET_ID,
       range,
     });
-    const [header, ...ascents] = response.data.values;
-    res.send({ header, ascents });
+    const [headers, ...ascents] = response.data.values;
+    res.send({ headers, ascents });
   } catch (err) {
     console.error(err);
     res.status(500).send(err);
@@ -55,7 +70,7 @@ app.get('/ascentsBySeason', async (req, res) => {
       spreadsheetId: process.env.SHEET_ID,
       range,
     });
-    const [header, ...rawAscents] = response.data.values;
+    const [headers, ...rawAscents] = response.data.values;
 
     const ascents = rawAscents.map(ascent => ({
       name: ascent[0],
