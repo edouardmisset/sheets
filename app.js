@@ -56,21 +56,32 @@ app.get('/ascentsBySeason', async (req, res) => {
       range,
     });
     const [header, ...rawAscents] = response.data.values;
-    
+
     const ascents = rawAscents.map(ascent => ({
       name: ascent[0],
       grade: ascent[1],
       date: ascent[12],
     }));
 
-    const seasons = new Set(
+    const seasonSet = new Set(
       ascents.map(({ date }) => {
         const newDate = new Date(date);
         return newDate.getFullYear();
       })
     );
 
-    res.send({ ascents, seasons });
+    const seasons = Array.from(seasonSet);
+
+    const ascentsBySeason = ascents.reduce((totalAscents, ascent) => {
+      const year = ascent.date.toString().slice(0, 4);
+      for (let index = 0; index < seasons.length; index++) {
+        const season = seasons[index].toString();
+        if (year === season) totalAscents[index] += 1;
+      }
+      return totalAscents;
+    }, Array(seasons.length).fill(0));
+
+    res.send({ seasons, ascentsBySeason });
   } catch (err) {
     console.error(err);
     res.status(500).send(err);
